@@ -11,6 +11,7 @@
     "cors": "^2.8.4",
     "dotenv": "^5.0.1",
     "express": "^4.16.3",
+    "joi": "^13.3.0",
     "morgan": "^1.9.0",
     "node-jre": "^0.2.3",
     "ts-node": "^6.0.5",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@types/body-parser": "^1.17.0",
     "@types/express": "^4.11.1",
+    "@types/joi": "^13.0.8",
     "@types/morgan": "^1.7.35",
     "@types/node": "^10.1.2",
     "tslint": "^5.10.0",
