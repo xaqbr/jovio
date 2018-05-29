@@ -13,17 +13,18 @@ const readFilePromise = promisify(readFile);
 const router = Router();
 
 export const getScriptFromName: RequestHandler = async (req, res) => {
-    const { name } = req.body;
+    const { name } = req.params;
     try {
+        if (!name) { throw new Error("Script not found."); }
         const code = await readFilePromise(
             resolve(SCRIPTS_DIRECTORY, `${name}.java`),
         );
-        res.json({ name, code });
+        res.json({ name, code: code.toString() });
     } catch (error) {
         res.status(500).send(error);
     }
 };
-router.get("/", getScriptFromName);
+router.get("/:name", getScriptFromName);
 
 export const createScript: RequestHandler = async (req, res) => {
     const { name, code } = req.body;
