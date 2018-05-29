@@ -3,10 +3,15 @@ import * as cors from "cors";
 import * as express from "express";
 import * as morgan from "morgan";
 
-import { router as ScriptRouter } from "./controllers/script";
+import { router as ScriptRouter, runScriptFromName } from "./controllers/script";
+
+import wsExpress = require("express-ws");
 
 // Create app
 const app = express();
+
+// Attach websocket middleware
+wsExpress(app);
 
 // Third-party middleware
 app.use(cors({ origin: "*" }));
@@ -15,6 +20,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(morgan("dev"));
 
 // Attach middleware
+ScriptRouter.ws("/:name", runScriptFromName);
 app.use("/", ScriptRouter);
 
 export { app };
