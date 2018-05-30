@@ -6,6 +6,7 @@ const logger = new Logger({
             colorize: true,
         }),
     ],
+    level: "debug",
 });
 
 export { logger };

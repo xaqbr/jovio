@@ -6,6 +6,7 @@ import * as morgan from "morgan";
 import { router as ScriptRouter, runScriptFromName } from "./controllers/script";
 
 import wsExpress = require("express-ws");
+import { logger } from "./utils/logger";
 
 // Create app
 const app = express();
@@ -22,5 +23,14 @@ app.use(morgan("dev"));
 // Attach middleware
 ScriptRouter.ws("/:name", runScriptFromName);
 app.use("/", ScriptRouter);
+
+// Error-handling middleware
+const errorHandler: express.ErrorRequestHandler = (err, _req, res, _next) => {
+    logger.error(err);
+    res.status(500).json({
+        error: err,
+    });
+};
+app.use(errorHandler);
 
 export { app };

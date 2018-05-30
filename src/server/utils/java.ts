@@ -1,7 +1,11 @@
 import * as Joi from "joi";
 
-import { spawn } from "child_process";
-import { resolve } from "path";
+import { exec, spawn } from "child_process";
+import { promisify } from "util";
+import { SCRIPTS_DIRECTORY } from "./constants";
+import { logger } from "./logger";
+
+const execProcessPromise = promisify(exec);
 
 export const ScriptSchema = Joi.object().keys({
     code: Joi.string().trim().required(),
@@ -9,15 +13,15 @@ export const ScriptSchema = Joi.object().keys({
 });
 
 export const compileJavaClass = async (filePath: string) => {
-    const compileProcess = spawn("javac", [filePath]);
-    compileProcess.stderr.on("data", (data) => { throw data; });
-    compileProcess.on("close", () => { return; });
+    await execProcessPromise(`javac ${filePath}`);
 };
 
-export const runJavaClass = async (filePath: string) => {
+export const runJavaClass = async (fileName: string) => {
+    logger.debug("Spawning java runtime process...");
     const runProcess = spawn(
         "java",
-        ["-cp", resolve(filePath, ".."), filePath],
+        [fileName],
+        { cwd: SCRIPTS_DIRECTORY },
     );
     return runProcess;
 };

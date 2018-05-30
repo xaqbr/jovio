@@ -5,14 +5,15 @@ import { resolve } from "path";
 import { promisify } from "util";
 
 import { SCRIPTS_DIRECTORY } from "../utils/constants";
-import { runJavaClass, ScriptSchema } from "../utils/java";
+import { compileJavaClass, runJavaClass, ScriptSchema } from "../utils/java";
+import { logger } from "../utils/logger";
 
 const writeFilePromise = promisify(writeFile);
 const readFilePromise = promisify(readFile);
 
 const router = Router();
 
-export const getScriptFromName: RequestHandler = async (req, res) => {
+export const getScriptFromName: RequestHandler = async (req, res, next) => {
     const { name } = req.params;
     try {
         if (!name) { throw new Error("Script not found."); }
@@ -21,36 +22,46 @@ export const getScriptFromName: RequestHandler = async (req, res) => {
         );
         res.json({ name, code: code.toString() });
     } catch (error) {
-        res.status(500).send(error);
+        next(error);
     }
 };
 router.get("/:name", getScriptFromName);
 
-export const createScript: RequestHandler = async (req, res) => {
+export const createScript: RequestHandler = async (req, res, next) => {
     const { name, code } = req.body;
     try {
         await ScriptSchema.validate({ name, code });
-        await writeFilePromise(
-            resolve(SCRIPTS_DIRECTORY, `${name}.java`),
-            code,
-        );
+        const filePath = resolve(SCRIPTS_DIRECTORY, `${name}.java`);
+        logger.info("Creating new script...", { script: filePath });
+        logger.debug("Creating script java file...", { script: filePath });
+        await writeFilePromise(filePath, code);
+        logger.debug("Compiling script...", { script: filePath });
+        await compileJavaClass(filePath);
         res.json({ name, code });
     } catch (error) {
-        res.status(500).send(error);
+        next(error);
     }
 };
 router.post("/", createScript);
 
 export const runScriptFromName: WebsocketRequestHandler = async (ws, req) => {
-    const { name } = req.body;
+    const { name } = req.params;
     try {
-        const runProcess = await runJavaClass(
-            resolve(SCRIPTS_DIRECTORY, `${name}.java`),
-        );
-        runProcess.stdout.on("data", (data) => { ws.emit("output", data); });
-        runProcess.on("close", (code, signal) => { ws.close(code, signal); });
+        const runProcess = await runJavaClass(name);
+        logger.info(`Running script: ${name}...`);
+        runProcess.stdout.on("data", (data) => {
+            if (data) {
+                logger.verbose(`Script output: ${data}`);
+                ws.send(data.toString());
+            }
+        });
+        runProcess.on("close", () => {
+            logger.info(`Script finished: ${name}.`);
+            ws.close(1000, "Program finished.");
+        });
     } catch (error) {
-        ws.close(0, `Error: ${error}`);
+        logger.error(error);
+        ws.close(1000, `Error: ${error}`);
     }
 };
 
