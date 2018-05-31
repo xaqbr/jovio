@@ -16,7 +16,7 @@ export const compileJavaClass = async (filePath: string) => {
     await execProcessPromise(`javac ${filePath}`);
 };
 
-export const runJavaClass = async (fileName: string) => {
+export const createJavaProcess = async (fileName: string) => {
     logger.debug("Spawning java runtime process...");
     const runProcess = spawn(
         "java",
@@ -24,4 +24,9 @@ export const runJavaClass = async (fileName: string) => {
         { cwd: SCRIPTS_DIRECTORY },
     );
     return runProcess;
+};
+
+export const runJavaProcess = async (fileName: string) => {
+    logger.debug("Running java process...");
+    return await execProcessPromise(`java ${fileName}`, { cwd: SCRIPTS_DIRECTORY });
 };

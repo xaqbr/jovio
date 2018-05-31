@@ -5,7 +5,7 @@ import { resolve } from "path";
 import { promisify } from "util";
 
 import { SCRIPTS_DIRECTORY } from "../utils/constants";
-import { compileJavaClass, runJavaClass, ScriptSchema } from "../utils/java";
+import { compileJavaClass, createJavaProcess, runJavaProcess, ScriptSchema } from "../utils/java";
 import { logger } from "../utils/logger";
 
 const writeFilePromise = promisify(writeFile);
@@ -44,11 +44,32 @@ export const createScript: RequestHandler = async (req, res, next) => {
 };
 router.post("/", createScript);
 
-export const runScriptFromName: WebsocketRequestHandler = async (ws, req) => {
+export const runStaticScriptFromName: RequestHandler = async (req, res, next) => {
     const { name } = req.params;
     try {
-        const runProcess = await runJavaClass(name);
-        logger.info(`Running script: ${name}...`);
+        const start = process.hrtime();
+        const runProcess = await runJavaProcess(name);
+        const elapsed = process.hrtime(start)[1] / 1000000;
+        logger.info(`Running script (static): ${name}...`);
+        const { stdout, stderr } = runProcess;
+        logger.verbose(`Script output: ${stdout}`);
+        logger.info(`Script finished: ${name}.`);
+        res.json({
+            output: stdout,
+            errors: stderr,
+            executionMs: elapsed.toFixed(2),
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+router.get("/:name/static", runStaticScriptFromName);
+
+export const runLiveScriptFromName: WebsocketRequestHandler = async (ws, req) => {
+    const { name } = req.params;
+    try {
+        const runProcess = await createJavaProcess(name);
+        logger.info(`Running script (live): ${name}...`);
         runProcess.stdout.on("data", (data) => {
             if (data) {
                 logger.verbose(`Script output: ${data}`);
